@@ -13,12 +13,12 @@ repeatedly, branched, replayed, and continued with the same model.
 ## Public demo
 
 - UI: <https://statescope.github.io/StateScope/>
-- Backend: <https://statescope-aacl-demo.onrender.com/>
-- Health check: <https://statescope-aacl-demo.onrender.com/api/health>
+- Backend: <https://statescope-aacl-demo-production.up.railway.app/>
+- Health check: <https://statescope-aacl-demo-production.up.railway.app/api/health>
 
-GitHub Pages serves the same `index.html` as the Python application. The hosted
-Python/SymPy runtime supplies the API. On localhost, the UI uses the same-origin
-server automatically.
+GitHub Pages serves the same `index.html` as the Python application. The
+Railway-hosted Python/SymPy runtime supplies the API. On localhost, the UI uses
+the same-origin server automatically.
 
 ## Credential handling
 

@@ -309,7 +309,7 @@ let ACTIVE_CREDENTIAL_ENV = null;
 
 // GitHub Pages hosts the same UI as the Python server.  Only the API origin
 // changes; localhost and the Render-hosted copy remain same-origin.
-const HOSTED_API_ORIGIN = "https://statescope-aacl-demo.onrender.com";
+const HOSTED_API_ORIGIN = "https://statescope-aacl-demo-production.up.railway.app";
 const API_ORIGIN = location.hostname === "statescope.github.io" ? HOSTED_API_ORIGIN : "";
 function apiUrl(path){
   const clean=String(path||"").replace(/^\/+/, "");
