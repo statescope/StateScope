@@ -1,0 +1,13 @@
+# Go/no-go with open models served via vLLM (large=Qwen3-14B, small=Qwen3-4B).
+# Requires the two vLLM servers running (see README_MODELS.md); offline tests never run this.
+name: gonogo_open
+families: [family_b]
+systems: [system_c_tools_text, system_d_ledger]
+models:
+  large: configs/models/open_qwen3_14b.yaml
+  small: configs/models/open_qwen3_4b.yaml
+conditions:
+  - clean
+  - injected/drop_constraint
+  - injected/skip_extraneous_check
+samples: 5

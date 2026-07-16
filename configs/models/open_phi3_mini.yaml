@@ -1,0 +1,23 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+type: openai_compat
+params:
+  model: microsoft/Phi-3-mini-4k-instruct
+  base_url: http://localhost:8000/v1
+  api_key_env: VLLM_API_KEY
+  api_key_fallback: EMPTY
+  timeout: 120
+  max_tokens: 2048
+  temperature: 0.0
+  supports_tools: false
+vllm:
+  model_id: microsoft/Phi-3-mini-4k-instruct
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.5
+  max_model_len: 4096
+  dtype: bfloat16
+  trust_remote_code: true
+catalog:
+  size_b: 3.8
+  category: general
+  recommended_gpu: A100-40GB x1
+  supports_tools: false

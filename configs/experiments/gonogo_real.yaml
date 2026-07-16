@@ -1,0 +1,21 @@
+# Go/no-go with labelled model roles (C_large_text vs D_large_ledger vs D_small_ledger).
+#
+# `models` maps a ROLE LABEL -> a model spec (a registered type name or a YAML config
+# path). The label is what the go/no-go rule matches on. Both roles point at the offline
+# `mock` here so the pipeline runs end-to-end today; swap them for real backend configs
+# once those exist, e.g.:
+#     large: configs/models/large.yaml     # type: openai,  params: {model: gpt-4o}
+#     small: configs/models/small.yaml     # type: vllm,    params: {model: Qwen3-4B}
+name: gonogo_real
+families: [family_b]
+n: 20
+seed: 0
+systems: [system_c_tools_text, system_d_ledger]
+models:
+  large: mock
+  small: mock
+conditions:
+  - clean
+  - injected/drop_constraint
+  - injected/skip_extraneous_check
+samples: 1

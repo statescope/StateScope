@@ -1,0 +1,5 @@
+# MockModel configuration (deterministic, offline).
+type: mock
+params:
+  mode: gold
+  seed: 0

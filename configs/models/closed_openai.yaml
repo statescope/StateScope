@@ -1,0 +1,14 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+type: openai
+params:
+  model: gpt-4o
+  api_key_env: OPENAI_API_KEY
+  timeout: 120
+  max_tokens: 2048
+  temperature: 0.0
+  supports_tools: true
+catalog:
+  category: general
+  recommended_gpu: api
+  supports_tools: true
+  status: deprecated

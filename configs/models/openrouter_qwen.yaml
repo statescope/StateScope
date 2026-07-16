@@ -1,0 +1,15 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+type: openrouter
+params:
+  model: qwen/qwen-2.5-72b-instruct
+  api_key_env: OPENROUTER_API_KEY
+  timeout: 120
+  max_tokens: 2048
+  temperature: 0.0
+  supports_tools: false
+  http_referer: https://github.com/your-org/driftmath
+  x_title: DriftMath
+catalog:
+  category: general
+  recommended_gpu: api (openrouter)
+  supports_tools: false

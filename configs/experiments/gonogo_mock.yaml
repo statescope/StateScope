@@ -1,0 +1,12 @@
+# Go/no-go experiment (mock): Family B, C vs D, clean + two targeted injections.
+name: gonogo_mock
+families: [family_b]
+n: 20
+seed: 0
+systems: [system_c_tools_text, system_d_ledger]
+models: [mock]
+conditions:
+  - clean
+  - injected/drop_constraint
+  - injected/skip_extraneous_check
+samples: 3

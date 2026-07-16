@@ -1,0 +1,14 @@
+type: openai
+params:
+  model: gpt-5.4-nano
+  api_key_env: OPENAI_API_KEY
+  timeout: 300
+  max_tokens: 16384
+  token_parameter: max_completion_tokens
+  temperature: null
+  supports_tools: true
+catalog:
+  category: reasoning
+  recommended_gpu: api
+  supports_tools: true
+  status: active

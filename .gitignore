@@ -1,0 +1,104 @@
+# DriftMath gitignore
+
+# -------------------------
+# Python bytecode / caches
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+.hypothesis/
+.nox/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# -------------------------
+# Build / packaging output
+# -------------------------
+build/
+dist/
+site/
+deploy/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# -------------------------
+# Virtual environments
+# -------------------------
+.venv/
+venv/
+env/
+ENV/
+.envrc
+
+# -------------------------
+# Secrets / local config
+# -------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+
+# -------------------------
+# DriftMath generated artifacts
+# -------------------------
+data/
+results/
+runs/
+artifacts/
+outputs/
+output/
+tmp/
+reports/
+checkpoints/
+/models/
+wandb/
+mlruns/
+*.jsonl
+*.manifest.json
+!tests/**/*.jsonl
+!tests/**/fixtures/**/*.jsonl
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
+logs/
+
+# -------------------------
+# Notebook / REPL state
+# -------------------------
+.ipynb_checkpoints/
+*.sage.py
+
+# -------------------------
+# IDE / editor / local tools
+# -------------------------
+.vscode/
+.idea/
+.cursor/
+.claude/
+.codex/
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

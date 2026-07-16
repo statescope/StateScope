@@ -1,0 +1,18 @@
+# NATIVE tool-calling ABLATION (not the main scientific path). Only models with
+# supports_tools=true use native; others fall back to text_json (native_fallback: true).
+# Use this to compare native tool calling against the controlled text-JSON protocol.
+name: gonogo_open_native_ablation
+families: [family_b]
+systems: [system_c_tools_text, system_d_ledger]
+models:
+  large: configs/models/open_qwen3_14b.yaml
+  small: configs/models/open_qwen3_4b.yaml
+adapter:
+  mode: native
+  repair_budget: 2
+  native_fallback: true
+conditions:
+  - clean
+  - injected/drop_constraint
+  - injected/skip_extraneous_check
+samples: 5

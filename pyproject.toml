@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driftmath"
+version = "0.1.0"
+description = "DriftMath: a CAS-verifiable benchmark for solution-state drift in multi-step math reasoning."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.5",
+    "sympy>=1.12",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+# Local open models served with vLLM / loaded with transformers (GPU).
+open = ["vllm", "transformers", "torch", "accelerate"]
+# Closed API providers.
+closed = ["openai", "anthropic", "google-genai"]
+# AACL demo track: the openai package is used only as the OpenAI-compatible *client*
+# for local vLLM endpoints; huggingface_hub downloads models into models/.
+aacl = ["openai", "huggingface_hub"]
+# Dataset ingestion (offline tests use local fixtures; these are only for real pulls).
+data = ["datasets", "huggingface_hub"]
+
+[tool.setuptools.packages.find]
+include = ["driftmath*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]

@@ -1,0 +1,9 @@
+# Smoke experiment: tiny matrix to exercise the full offline pipeline.
+name: smoke
+families: [family_a, family_b]
+n: 5
+seed: 0
+systems: [system_c_tools_text, system_d_ledger]
+models: [mock]
+conditions: [clean, injected]
+samples: 1

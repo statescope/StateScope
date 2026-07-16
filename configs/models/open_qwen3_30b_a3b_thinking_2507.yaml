@@ -1,0 +1,28 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+# Optional AACL variant: the Thinking release of Qwen3-30B-A3B (long reasoning
+# traces, so a bigger max_tokens budget). Not part of the required AACL set.
+type: openai_compat
+params:
+  model: Qwen/Qwen3-30B-A3B-Thinking-2507
+  base_url: http://localhost:8000/v1
+  api_key_env: VLLM_API_KEY
+  api_key_fallback: EMPTY
+  timeout: 300
+  max_tokens: 8192
+  temperature: 0.0
+  supports_tools: false
+  extra_body:
+    chat_template_kwargs:
+      enable_thinking: false
+vllm:
+  model_id: Qwen/Qwen3-30B-A3B-Thinking-2507
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.5
+  max_model_len: 32768
+  dtype: bfloat16
+  trust_remote_code: true
+catalog:
+  size_b: 30
+  category: reasoning
+  recommended_gpu: MI300X-192GB x1
+  supports_tools: false

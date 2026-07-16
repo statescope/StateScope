@@ -1,0 +1,19 @@
+# Minimal paper matrix over open models, all four families, C vs D, via the controlled
+# text-JSON protocol. Served via vLLM; offline tests never run this. `samples` configurable.
+name: paper_min_textjson
+families: [family_a, family_b, family_c, family_d]
+systems: [system_c_tools_text, system_d_ledger]
+models:
+  small_general_1_5b: configs/models/open_qwen25_1_5b.yaml
+  med_general_4b: configs/models/open_qwen3_4b.yaml
+  med_general_8b: configs/models/open_llama31_8b.yaml
+  med_math_7b: configs/models/open_qwen25_math_7b.yaml
+  large_math_reasoning_14b: configs/models/open_deepseek_r1_distill_qwen_14b.yaml
+adapter:
+  mode: text_json
+  repair_budget: 2
+  native_fallback: false
+conditions:
+  - clean
+  - injected
+samples: 3

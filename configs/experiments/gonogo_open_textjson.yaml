@@ -1,0 +1,18 @@
+# Go/no-go on open models via the controlled TEXT-JSON operation protocol (the main
+# scientific path). Same protocol for every model -> a controlled C-vs-D comparison.
+# Requires the two vLLM servers running (see README_MODELS.md); offline tests never run this.
+name: gonogo_open_textjson
+families: [family_b]
+systems: [system_c_tools_text, system_d_ledger]
+models:
+  large: configs/models/open_qwen3_14b.yaml
+  small: configs/models/open_qwen3_4b.yaml
+adapter:
+  mode: text_json
+  repair_budget: 2
+  native_fallback: false
+conditions:
+  - clean
+  - injected/drop_constraint
+  - injected/skip_extraneous_check
+samples: 5

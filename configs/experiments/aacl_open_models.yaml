@@ -1,0 +1,22 @@
+# AACL demo-track batch evaluation: open local models only, over the released
+# 250-problem DemoBench, through the controlled text-JSON operation protocol.
+# Run with scripts/run_aacl_batch.py (incremental, resumable); the model keys
+# resolve through driftmath.models.aacl_models -> configs/models/*.yaml.
+name: aacl_open_models
+dataset: data/aacl_statescope_demobench.jsonl
+out_dir: results/aacl_open_models
+systems: [system_c_tools_text, system_d_ledger]
+adapter:
+  mode: text_json
+  repair_budget: 2
+  native_fallback: false
+conditions: [clean]
+samples: 1
+models:
+  - qwen25_1_5b            # Qwen/Qwen2.5-1.5B-Instruct
+  - qwen3_4b               # Qwen/Qwen3-4B
+  - qwen3_8b               # Qwen/Qwen3-8B
+  - qwen25_math_7b         # Qwen/Qwen2.5-Math-7B-Instruct
+  - r1_distill_qwen_14b    # deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+  - qwen3_14b              # Qwen/Qwen3-14B
+  - qwen3_30b_a3b          # Qwen/Qwen3-30B-A3B-Instruct-2507

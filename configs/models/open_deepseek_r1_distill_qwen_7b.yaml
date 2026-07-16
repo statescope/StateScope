@@ -1,0 +1,23 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+type: openai_compat
+params:
+  model: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+  base_url: http://localhost:8000/v1
+  api_key_env: VLLM_API_KEY
+  api_key_fallback: EMPTY
+  timeout: 120
+  max_tokens: 2048
+  temperature: 0.0
+  supports_tools: false
+vllm:
+  model_id: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.5
+  max_model_len: 16384
+  dtype: bfloat16
+  trust_remote_code: true
+catalog:
+  size_b: 7
+  category: reasoning
+  recommended_gpu: A100-40GB x1
+  supports_tools: false

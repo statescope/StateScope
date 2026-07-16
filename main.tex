@@ -1,0 +1,474 @@
+% StateScope system-demonstration paper draft for AACL-IJCNLP 2026.
+% Upload this file into the official ACL Overleaf project (which supplies acl.sty).
+% AACL-IJCNLP 2026 demos are single-blind, so author names must be present.
+\documentclass[11pt]{article}
+
+\usepackage[final]{acl}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+  \usepackage{graphicx}
+  \usepackage{booktabs}
+  \usepackage{multirow}
+  \usepackage{xcolor}
+  \usepackage{amsmath}
+  \usepackage{amssymb}
+  \usepackage{url}
+
+% -----------------------------------------------------------------------------
+% Replace every placeholder below before submission.  A public demo/package link
+% and a <=2.5 minute video are mandatory for the AACL-IJCNLP 2026 demo track.
+% -----------------------------------------------------------------------------
+\newcommand{\systemname}{\textsc{StateScope}}
+\newcommand{\codeurl}{https://github.com/USERNAME/DriftMath}
+\newcommand{\demourl}{https://YOUR-LIVE-DEMO-OR-INSTALL-PAGE}
+\newcommand{\videourl}{https://youtu.be/VIDEO-ID}
+\newcommand{\softwarelicense}{[ADD SOFTWARE LICENSE, e.g., Apache-2.0]}
+
+\title{\systemname: An Extensible Framework for Controlled,\\
+Interactive Analysis of Mathematical Reasoning}
+
+\author{First Author \\
+  Department, Institution \\
+  City, Country \\
+  \texttt{first.author@example.edu}
+  \And
+  Second Author \\
+  Department, Institution \\
+  City, Country \\
+  \texttt{second.author@example.edu}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present \systemname, an extensible framework for controlled, interactive analysis
+of language-model mathematical reasoning.  The framework is organized around four
+capabilities.  First, it generates seeded, fresh-parameter problem instances with
+SymPy-constructed reference traces,
+reducing dependence on static benchmarks and their contamination risk.  Second, it
+controls reasoning context through typed operations and an explicit symbolic state,
+rather than repeatedly exposing an unconstrained conversation history.  Third, it
+supports multi-turn model execution and a deterministic counterfactual sandbox.
+Fourth, core registries for problem families, model backends, and state systems,
+together with a central operation-specification table, make the runtime
+straightforward to extend.  As a flagship use case, \systemname{} detects
+\emph{solution-state drift}: a variable binding, constraint, or intermediate value
+diverges even when the final answer appears correct.  A browser interface compares
+model-owned state with a CAS-verified external ledger and explains the first
+divergence without an LLM judge.  Experiments on 250 dynamically generated problems
+and four locally served open models validate the framework and illustrate the value
+of explicit state ownership.  The system exports auditable traces for researchers,
+developers, and educators.
+Code, installable demo, and video are available at \url{\codeurl},
+\url{\demourl}, and \url{\videourl}, respectively.
+\end{abstract}
+
+\section{Introduction}
+
+Mathematical-reasoning research is often built around static datasets, uncontrolled
+prompt histories, and a single final-answer metric.  This makes four practical
+questions difficult to study.  Can evaluation instances be refreshed to reduce
+memorization concerns?  Can the information available at each reasoning step be
+specified exactly?  Can models and users interact with, inspect, and revise a live
+reasoning process?  Can a new task family or inference system be added without
+rewriting an evaluation stack?
+
+\systemname{} is designed around these questions.  It combines a dynamic symbolic
+problem generator, a context-controlled operation loop, an interactive replay UI,
+and a registry-based research runtime.  Together, these components turn a benchmark
+script into a reusable framework for constructing and studying stateful reasoning
+systems.  The implementation underneath the interface is the DriftMath runtime;
+\systemname{} is its end-to-end demonstration and analysis environment.
+
+Our primary demonstration studies a limitation of final-answer evaluation.
+Intermediate reasoning can be inconsistent even when cancellation, guessing, or a
+later correction produces the right answer.  Process supervision and error-location
+benchmarks make intermediate correctness explicit
+\citep{lightman2023verify,zheng2025processbench}, but they typically score a fixed
+natural-language solution.  They do not expose the evolving symbolic state that a
+solver must carry across variable bindings, branch choices, domain constraints, and
+reused lemmas.
+
+We call divergence in that evolving state \emph{solution-state drift}.  For example,
+after squaring $\sqrt{x+2}=x$, a solver must carry both the resulting candidates and
+the original domain constraint; checking only the reported root cannot reveal when
+one of these components was dropped.  The practical question is therefore not only
+``Was the answer correct?'', but ``At which operation did the live state first cease
+to match a verified derivation, what changed, and what happened downstream?''
+
+The framework contributions are:
+(1) \textbf{dynamic generation}: seeded, fresh-parameter, provenance-tracked
+instances with SymPy-constructed gold traces;
+(2) \textbf{context control}: a typed, one-operation-per-turn protocol whose next
+prompt contains the problem and current symbolic state rather than an ever-growing
+free-form transcript;
+(3) \textbf{multi-turn interaction}: iterative model execution, paired side-by-side
+system inspection, and a human-editable deterministic replay sandbox; and
+(4) \textbf{extensibility}: core interfaces and registries for problem families,
+model backends, and state-management systems, plus a single specification table for
+the typed operation layer.
+Solution-state drift detection is the unifying use case through which the paper
+demonstrates these capabilities.  Unlike a learned critic, mathematical verdicts and
+state differences and their explanations after generation are derived
+deterministically; operation verdicts use SymPy where an operation is marked
+CAS-checkable.
+
+\begin{figure*}[t]
+\centering
+\setlength{\fboxsep}{5pt}
+\small
+\fbox{\parbox[c][1.05cm][c]{.15\textwidth}{\centering Problem\\+ local model}}
+\hfill$\longrightarrow$\hfill
+\fbox{\parbox[c][1.05cm][c]{.17\textwidth}{\centering Text--JSON adapter\\one typed operation}}
+\hfill$\longrightarrow$\hfill
+\fbox{\parbox[c][1.05cm][c]{.20\textwidth}{\centering System C: model claim\\System D: typed ledger}}
+\hfill$\longrightarrow$\hfill
+\fbox{\parbox[c][1.05cm][c]{.16\textwidth}{\centering SymPy verifier\\+ gold alignment}}
+\hfill$\longrightarrow$\hfill
+\fbox{\parbox[c][1.05cm][c]{.15\textwidth}{\centering Diff, replay,\\and export}}
+\caption{\systemname{} framework.  Dynamic problems enter a context-controlled,
+multi-turn operation loop.  Pluggable state systems feed a shared verifier and the
+interactive inspection, replay, and export layer.}
+\label{fig:architecture}
+\end{figure*}
+
+\section{Framework Design}
+
+\subsection{Dynamic, contamination-resistant generation}
+
+Instead of treating a static collection as the framework boundary, each problem
+family implements a generator that samples fresh parameters from a seeded template
+and constructs its symbolic solution trace with SymPy operations.  Unit tests check
+the family and oracle behavior, but the current dataset builder does not run a
+separate proof checker over every completed trace.  A manifest records the
+seed, family counts, package version, source policy, and code revision.  Regeneration
+therefore produces a reproducible evaluation set while allowing new surface
+instances for subsequent studies.
+
+This design is \emph{contamination-resistant}, not a claim of contamination proof.
+A pretrained model may have encountered the underlying mathematical form, but it
+cannot simply retrieve the freshly parameterized instance from a public test file.
+New generators can implement fully synthetic tasks, licensed template
+reinstantiation, or externally sourced tasks with an explicit contamination-risk
+label; the headline demo uses only the synthetic path.
+
+\subsection{Explicit context control}
+
+The runtime exposes the model to a deliberately bounded view at every turn: the
+problem statement, the current structured state, the allowed operation schemas, and
+progress guardrails.  It does not resend a free-form transcript of prior rationales.
+Consequently, an experimenter can identify what information is available, replace
+the state-management policy, and measure failures in carrying state separately from
+failures in choosing the next operation.  The ledger condition further makes
+context state an executable system object rather than model-authored prose.
+
+\subsection{Symbolic state and operations}
+
+At reasoning step $t$, a state $S_t$ contains live and discharged bindings,
+constraints, a current expression or equation, candidate solutions, dependency
+nodes, and an optional final answer.  Expressions are serialized as strings but
+compared semantically with SymPy \citep{meurer2017sympy}; equality is never based on
+surface text.  Each problem also has a CAS-constructed gold trace
+$G=(G_0,\ldots,G_{T-1})$.
+
+The model emits exactly one JSON object per turn containing an operation name,
+typed arguments, its complete claimed post-state, a completion flag, and a short
+rationale.  The allowed operation set is family-specific and includes operations
+such as \texttt{bind}, \texttt{square\_equation}, \texttt{filter\_candidates},
+\texttt{establish\_lemma}, and \texttt{report}.  A bounded two-attempt repair loop
+handles malformed JSON; validation rejects repeated bindings and premature
+completion.  The same adapter and tool implementation are used in both conditions.
+
+\subsection{State ownership comparison}
+
+\paragraph{System C: tools + textual state.}
+The operation is executed and checked on a scratch ledger, but the model's claimed
+post-state is the trace state.  A stale or incomplete claim can therefore propagate
+even when the selected operation itself is valid.
+
+\paragraph{System D: tools + typed ledger.}
+The model chooses the operation, while the runtime validates its arguments, applies
+it to the ledger, and CAS-verifies the result.  The verified ledger snapshot becomes
+the trace state.  Invalid or unverifiable operations stop the run rather than
+silently changing state.  Thus, System D does not make the model a better planner;
+it tests whether external state ownership prevents bookkeeping errors.
+
+\subsection{Drift analysis}
+
+For aligned step $t$, \systemname{} compares $S_t$ and $G_t$ component-wise.  The
+corruption-onset depth (COD) is the first unequal step, and propagation length counts
+later unequal aligned steps.  The UI identifies which of bindings, constraints,
+current expression/equation, candidates, or final answer first diverged.  It also
+shows whether the operation at COD passed CAS verification, separating a valid
+operation with a stale carried state from an invalid transformation.  We use the
+term \emph{drift} for divergence from the canonical oracle trajectory; a CAS-valid
+alternative derivation is not automatically declared mathematically invalid.
+
+The original benchmark metric, aligned state fidelity, is the fraction of aligned
+steps whose post-states equal gold.  Because a short trace has fewer opportunities
+to disagree, we additionally report strict gold-normalized fidelity:
+\begin{equation}
+ \mathrm{SF}_{g}=\frac{1}{T}\sum_{t=0}^{T-1}
+ \mathbb{1}[t\ \text{is emitted and}\ S_t\equiv G_t].
+ \label{eq:sfg}
+\end{equation}
+Missing steps therefore receive zero credit.  Final-answer accuracy is computed
+independently by symbolic equality.
+
+\subsection{Extensible research interfaces}
+
+Problem families share a generator interface; systems share a solver interface;
+model backends resolve through a model registry and YAML configuration; and all
+operation descriptions, examples, validation rules, and tool schemas derive from a
+single operation-specification table.  The browser obtains its model list from the
+same AACL model catalog used by batch evaluation.  Adding another locally served
+model that uses the existing backend requires a model configuration and one catalog
+entry rather than core-logic changes.  Adding a mathematical
+phenomenon requires a family generator, gold-trace builder, and any genuinely new
+operation specifications.  Trace, metric, replay, and export components remain
+unchanged.  The core runtime is extensible, although the current demo UI explicitly
+hardcodes Systems C and D and the AACL model catalog.  Metrics and report analyses
+are modular functions, not a plugin registry.  This separation is the central
+framework-level selling point: the drift demo is one analysis built from reusable
+execution primitives.
+
+\section{Multi-Turn Interactive Demonstration}
+
+The current UI exposes a curated set of generated problems.  The user selects one,
+a model, and an execution route, then chooses either \emph{Run both} or a
+one-turn-at-a-time \emph{Step through} view.  For a low-cost hosted presentation the
+interface defaults to GPT-5 nano when an OpenAI credential is available; the
+headline evaluation in Section~4 remains the preregistered open, locally served
+model matrix.  Paired System-C and System-D panels display each operation, compact
+state snapshot, CAS status, and components that differ from the oracle.  Selecting
+the first highlighted row opens a deterministic explanation such as ``constraint
+$x\neq 3$ is absent''; no LLM writes this diagnosis.
+
+The recommended presentation mode is a controlled state-ownership comparison.  It
+holds the CAS-constructed operation schedule and typed arguments fixed across the
+two panels while the model still emits its complete claimed post-state.  System C
+records that claim, whereas System D ignores the claim and re-derives state in its
+ledger.  This removes operation-schedule differences from the visual comparison and
+makes the manipulated variable explicit.  An autonomous diagnostic mode, in which
+the model chooses every operation, remains available and labels schedule divergence
+separately from stale-state drift.  In controlled mode, a premature final-answer
+claim is recorded as state drift but does not terminate the fixed schedule.
+
+The counterfactual sandbox operates on the trace just produced.  A user may edit an
+operation or its arguments at any retained step, or edit the claimed state for
+System C.  The same model can continue from the edited state, or the backend can
+re-derive the downstream trace deterministically.  Every result is stored as a new
+branch that can itself be edited again.  Failed operations are transactionally
+rolled back to the last safe ledger state and retained as editable nodes; if a
+protocol failure omitted a step, the aligned oracle operation provides a recovery
+template.  A branch navigator and quick-restore controls support repeated sequential
+interventions for either system.  System D continues to reject direct state edits
+because its ledger owns state.  Sessions and individual branches
+can be exported as JSON or Markdown with model configuration, operations, states,
+metrics, intervention history, and failure events.  A labeled mock mode can plant a
+chosen drift offline for tutorials; it is not used as experimental evidence.
+
+\begin{figure}[t]
+\centering
+\IfFileExists{figures/statescope_ui.png}{%
+  \includegraphics[width=\columnwidth]{figures/statescope_ui.png}%
+}{%
+  \fbox{\parbox[c][4.0cm][c]{.92\columnwidth}{\centering
+  \textbf{REPLACE BEFORE SUBMISSION}\\[4pt]
+  Add a high-resolution screenshot as\\
+  \texttt{figures/statescope\_ui.png}.\\[6pt]
+  Show both system panels, the highlighted first-drift row, and the drift-analysis
+  drawer.}}%
+}
+\caption{The intended demo view: paired model-owned and ledger-owned traces,
+with the first divergent state highlighted and explained.}
+\label{fig:ui}
+\end{figure}
+
+\section{Framework Validation}
+
+\subsection{Data and setup}
+
+To validate the complete framework rather than position leaderboard numbers as its
+main contribution, we instantiate DemoBench with 250 synthetic problems, balanced
+across four families:
+(A) binding chains and substitution; (B) equations with branch or domain
+constraints; (C) recurrences and iterative state; and (D) derivative lemma DAGs.
+Family counts are 63/63/62/62.  Every instance has fresh parameters, explicit
+provenance, and a SymPy-constructed gold trace.  The benchmark therefore measures the
+controlled phenomenon rather than broad contest-math ability, and avoids direct
+test-set contamination from established math corpora.
+
+We evaluate Qwen2.5-1.5B-Instruct \citep{qwen2024qwen25}, Qwen3-4B, Qwen3-8B, and
+Qwen3-30B-A3B-Instruct-2507 \citep{yang2025qwen3}.  Each model is served locally
+with vLLM in bfloat16 and temperature zero.  For every model--problem pair we run
+Systems C and D once through the same text--JSON protocol.  This yields 2,000
+completed runs (four models $\times$ 250 problems $\times$ two systems).  SymPy is
+the sole judge.  Results are descriptive for this fixed, single-sample setting.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{2}{c}{Final accuracy (\%)}
+& \multicolumn{2}{c}{$\mathrm{SF}_{g}$ (\%)}
+& \multicolumn{2}{c}{Emitted-step coverage (\%)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Model & C & D & C & D & C & D \\
+\midrule
+Qwen2.5-1.5B          & 0.4 & 6.8  & 0.0 & 11.7 & 82.5 & 65.1 \\
+Qwen3-4B              & 6.8 & 23.2 & 5.0 & 24.4 & 89.5 & 70.1 \\
+Qwen3-8B              & 6.8 & 25.6 & 3.2 & 28.7 & 95.5 & 80.2 \\
+Qwen3-30B-A3B         & 9.2 & 38.4 & 9.1 & 32.0 & 93.4 & 79.7 \\
+\midrule
+Pooled                 & 5.8 & 23.5 & 4.3 & 24.2 & 90.2 & 73.8 \\
+\bottomrule
+\end{tabular}
+\caption{Paired evaluation on 250 problems per model.  C records model-claimed
+state; D records the typed ledger.  $\mathrm{SF}_{g}$ penalizes missing steps as in
+Eq.~\ref{eq:sfg}.  Coverage clarifies the trade-off introduced when D stops on an
+invalid operation.}
+\label{tab:main}
+\end{table*}
+
+\subsection{Results}
+
+Table~\ref{tab:main} is a framework sanity check and an example of the controlled
+comparisons \systemname{} enables.  It shows a consistent ledger benefit.  Pooled final-answer
+accuracy rises by 17.7 points, and strict state fidelity rises by 19.9 points.  The
+gain appears for every evaluated model rather than only the largest.  The ledger is
+more conservative: emitted-step coverage falls from 90.2\% to 73.8\% because it
+halts on an invalid or unverifiable operation.  This is desirable for auditability
+but means that the accuracy gain should not be described as unconstrained solving
+performance.
+
+Final-answer checking also misses useful trace information.  In the model-owned
+condition, 58 of 1,000 runs have a correct final answer, yet all 58 diverge from the
+canonical state trace at an earlier aligned step.  Across both conditions, first
+divergence most often involves bindings (39.7\% of component flags), followed by
+constraints (20.6\%) and the current expression (18.4\%).  These are precisely the
+components surfaced by the UI.  The result supports \systemname{} as an inspection
+tool, while the high overall drift rates also motivate conservative wording:
+trajectory mismatch is evidence to inspect, not by itself a proof that every
+alternative derivation is invalid.
+
+\section{Related Systems}
+
+Outcome verifiers rank complete solutions \citep{cobbe2021verifiers}, while process
+supervision assigns step-level feedback \citep{lightman2023verify}.  ProcessBench
+asks models to locate the earliest incorrect step in fixed solutions
+\citep{zheng2025processbench}.  \systemname{} instead provides an extensible
+execution framework: it dynamically constructs controlled instances, tracks
+structured state online, uses exact symbolic comparison where supported, and allows
+the user to replay an edited operation.
+
+ReasonGraph visualizes sequential and tree-structured inference paths
+\citep{li2025reasongraph}.  Its focus is organizing reasoning text and method-level
+paths; ours is semantic state comparison and CAS-backed diagnosis in mathematics.
+Formal proof assistants expose proof states but require proofs in a formal language.
+\systemname{} occupies a lighter-weight middle ground: a constrained operation
+language, a computer-algebra oracle, and a browser interface for open language
+models.
+
+\section{Availability, Licensing, and Reproducibility}
+
+The application is a Python backend with a dependency-free browser frontend.  Model
+weights remain local and are served through vLLM; the supported evaluation path does
+not call proprietary APIs.  The repository includes model configurations, dynamic
+dataset generation, resumable batch execution, append-only traces, report generation,
+and offline tests.  The software release is intended under \softwarelicense; this field
+and the repository's \texttt{LICENSE} file must agree before submission.  Synthetic
+DemoBench items are marked CC0-1.0, and upstream model licenses remain their owners'.
+The public package/install page is \url{\demourl}.
+
+\section{Limitations and Ethical Considerations}
+
+Dynamic generation reduces instance-memorization risk but cannot establish that a
+model has never seen the underlying templates.  DemoBench is synthetic and covers
+algebraic state phenomena, not the breadth of
+natural-language or competition mathematics.  Each model is sampled once, so we do
+not estimate decoding variance.  Step-index alignment assumes the controlled
+operation schedule and can flag a valid alternative derivation; CAS status and the
+strict metric reduce but do not eliminate this construct-validity risk.  SymPy
+parsing can also fail on informal notation.  Finally, the current evaluation tests
+system behavior, not whether the interface helps people diagnose errors faster; a
+counterbalanced raw-trace versus UI study is future work.
+
+The system should not be used to certify high-stakes mathematical conclusions.
+Its deterministic explanations describe differences from a reference trace, and
+the UI preserves CAS and parser uncertainty rather than presenting every highlight
+as a proof of error.  All headline data are freshly generated synthetic instances;
+no personal or sensitive data are used.
+
+\section{Conclusion}
+
+\systemname{} is a framework for building controlled, inspectable reasoning
+experiments rather than only another static math benchmark.  Dynamic generation
+reduces contamination risk; explicit state makes context controllable; iterative
+execution and counterfactual replay make reasoning genuinely interactive; and
+core registries allow new families, model backends, and systems to reuse the same
+runtime, while operations derive from one specification table.  Solution-state
+drift is the flagship demonstration: contrasting
+model-owned state with a CAS-verified ledger localizes divergence and makes the
+consequence of an edit visible.  The demo is intended for researchers developing
+reasoning agents, educators teaching multi-step derivations, and developers
+evaluating tool-using models.
+
+\begin{thebibliography}{8}
+
+\bibitem[Cobbe et~al.(2021)Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser,
+Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman]{cobbe2021verifiers}
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz
+Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano,
+Christopher Hesse, and John Schulman. 2021.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}.
+
+\bibitem[Li et~al.(2025)Li, Shareghi, and Collier]{li2025reasongraph}
+Zongqian Li, Ehsan Shareghi, and Nigel Collier. 2025.
+\newblock ReasonGraph: Visualization of reasoning methods and extended inference
+paths.
+\newblock In \emph{Proceedings of ACL 2025: System Demonstrations}, pages 140--147.
+
+\bibitem[Lightman et~al.(2023)Lightman, Kosaraju, Burda, Edwards, Baker, Lee,
+Leike, Schulman, Sutskever, and Cobbe]{lightman2023verify}
+Hunter Lightman, Vineet Kosaraju, Yura Burda, Harri Edwards, Bowen Baker, Teddy
+Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. 2023.
+\newblock Let's verify step by step.
+\newblock \emph{arXiv preprint arXiv:2305.20050}.
+
+\bibitem[Meurer et~al.(2017)Meurer, Smith, Paprocki, \v{C}ert\'{i}k,
+Kirpichev, Rocklin, Kumar, Ivanov, Moore, Singh, et~al.]{meurer2017sympy}
+Aaron Meurer, Christopher~P. Smith, Mateusz Paprocki, Ond\v{r}ej \v{C}ert\'{i}k,
+Sergey~B. Kirpichev, Matthew Rocklin, AMiT Kumar, Sergiu Ivanov, Jason~K. Moore,
+Sartaj Singh, et~al. 2017.
+\newblock SymPy: Symbolic computing in Python.
+\newblock \emph{PeerJ Computer Science}, 3:e103.
+
+\bibitem[Qwen et~al.(2024)]{qwen2024qwen25}
+Qwen, An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu,
+et~al. 2024.
+\newblock Qwen2.5 technical report.
+\newblock \emph{arXiv preprint arXiv:2412.15115}.
+
+\bibitem[Yang et~al.(2025)Yang, Li, Yang, Zhang, Hui, Zheng, Yu, et~al.]{yang2025qwen3}
+An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu,
+et~al. 2025.
+\newblock Qwen3 technical report.
+\newblock \emph{arXiv preprint arXiv:2505.09388}.
+
+\bibitem[Zheng et~al.(2025)Zheng, Zhang, Zhang, Lin, Lu, Yu, Liu, Zhou, and
+Lin]{zheng2025processbench}
+Chujie Zheng, Zhenru Zhang, Beichen Zhang, Runji Lin, Keming Lu, Bowen Yu,
+Dayiheng Liu, Jingren Zhou, and Junyang Lin. 2025.
+\newblock ProcessBench: Identifying process errors in mathematical reasoning.
+\newblock In \emph{Proceedings of ACL 2025}, pages 1009--1024.
+
+\end{thebibliography}
+
+\end{document}

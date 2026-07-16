@@ -1,0 +1,15 @@
+# DriftMath model config -- edit freely (HF ids, context length, GPU plan).
+type: openrouter
+params:
+  model: anthropic/claude-3.5-sonnet
+  api_key_env: OPENROUTER_API_KEY
+  timeout: 120
+  max_tokens: 2048
+  temperature: 0.0
+  supports_tools: true
+  http_referer: https://github.com/your-org/driftmath
+  x_title: DriftMath
+catalog:
+  category: general
+  recommended_gpu: api (openrouter)
+  supports_tools: true
